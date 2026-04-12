@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #070A13;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI Variable", "Segoe UI", Roboto, Arial, "Noto Sans", "Liberation Sans", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold transition;
+  }
+
+  .btn-primary {
+    @apply btn text-white shadow-glow;
+    background-image: linear-gradient(90deg, rgba(76,201,240,0.95), rgba(181,23,255,0.85), rgba(255,77,222,0.85));
+  }
+  .btn-primary:hover {
+    filter: brightness(1.06);
+  }
+
+  .btn-secondary {
+    @apply btn border border-neonBlue/30 bg-white/10 text-white shadow-card;
+  }
+  .btn-secondary:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+  }
+
+  .btn-ghost {
+    @apply btn text-white/80;
+    background-color: rgba(255, 255, 255, 0.06);
+  }
+  .btn-ghost:hover {
+    background-color: rgba(255, 255, 255, 0.10);
+    color: rgba(255, 255, 255, 1);
+  }
+
+  .btn-danger {
+    @apply btn border border-neonPink/35 bg-neonPink/10 text-white;
+  }
+  .btn-danger:hover {
+    @apply bg-neonPink/15;
+  }
+}
