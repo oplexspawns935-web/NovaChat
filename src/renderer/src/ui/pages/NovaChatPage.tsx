@@ -1,7 +1,7 @@
 import React from 'react'
 import { HashRouter, Navigate, Route, Routes, Link, useLocation } from 'react-router-dom'
 
-const API_URL = 'http://localhost:8000'
+const API_URL = 'https://novachat-production-8aef.up.railway.app'
 
 function Sidebar() {
   const location = useLocation()
@@ -77,6 +77,7 @@ function ChatView() {
   const [friends, setFriends] = React.useState<any[]>([])
   const [inputUsername, setInputUsername] = React.useState('')
   const [inputPassword, setInputPassword] = React.useState('')
+  const [inputEmail, setInputEmail] = React.useState('')
 
   const messagesEndRef = React.useRef<HTMLDivElement>(null)
 
@@ -98,7 +99,8 @@ function ChatView() {
   }, [])
 
   const connectWebSocket = (uid: string) => {
-    const socket = new WebSocket(`ws://localhost:8000/ws/${uid}`)
+    const wsUrl = API_URL.replace('https://', 'wss://').replace('http://', 'ws://')
+    const socket = new WebSocket(`${wsUrl}/ws/${uid}`)
     
     socket.onopen = () => {
       console.log('WebSocket connected')
@@ -144,7 +146,7 @@ function ChatView() {
 
   const handleRegister = async () => {
     try {
-      const response = await fetch(`${API_URL}/auth/register?username=${encodeURIComponent(inputUsername)}&password=${encodeURIComponent(inputPassword)}`, {
+      const response = await fetch(`${API_URL}/auth/register?username=${encodeURIComponent(inputUsername)}&email=${encodeURIComponent(inputEmail)}&password=${encodeURIComponent(inputPassword)}`, {
         method: 'POST',
       })
       const data = await response.json()
@@ -157,6 +159,7 @@ function ChatView() {
         localStorage.setItem('friendCode', data.friend_code)
         connectWebSocket(data.user_id)
         loadFriends(data.user_id)
+        alert('Registration successful! Please check your email for verification.')
       } else {
         alert(data.detail || 'Registration failed')
       }
@@ -230,6 +233,13 @@ function ChatView() {
               placeholder="Username"
               value={inputUsername}
               onChange={(e) => setInputUsername(e.target.value)}
+              className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg outline-none border border-gray-600 focus:border-indigo-500"
+            />
+            <input
+              type="email"
+              placeholder="Email"
+              value={inputEmail}
+              onChange={(e) => setInputEmail(e.target.value)}
               className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg outline-none border border-gray-600 focus:border-indigo-500"
             />
             <input

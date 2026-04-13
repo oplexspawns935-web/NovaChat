@@ -35,6 +35,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,
             username TEXT UNIQUE NOT NULL,
+            email TEXT NOT NULL,
             password TEXT NOT NULL,
             friend_code TEXT UNIQUE NOT NULL,
             status TEXT DEFAULT 'offline',
@@ -130,9 +131,9 @@ async def root():
     return {"message": "NovaChat Server - Real-time Chat Backend"}
 
 @app.post("/auth/register")
-async def register(username: str = None, password: str = None):
-    if not username or not password:
-        raise HTTPException(status_code=400, detail="Username and password required")
+async def register(username: str = None, email: str = None, password: str = None):
+    if not username or not password or not email:
+        raise HTTPException(status_code=400, detail="Username, email, and password required")
     
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -142,10 +143,14 @@ async def register(username: str = None, password: str = None):
         friend_code = manager.generate_friend_code()
         
         cursor.execute(
-            "INSERT INTO users (id, username, password, friend_code, status, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-            (user_id, username, password, friend_code, 'offline', datetime.now().isoformat())
+            "INSERT INTO users (id, username, email, password, friend_code, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (user_id, username, email, password, friend_code, 'offline', datetime.now().isoformat())
         )
         conn.commit()
+        
+        # In production, send verification email here
+        # For now, just log it
+        print(f"Verification email would be sent to: {email}")
         
         return {"user_id": user_id, "friend_code": friend_code, "username": username}
     except sqlite3.IntegrityError:
