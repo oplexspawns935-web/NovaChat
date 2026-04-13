@@ -8,6 +8,9 @@ import asyncio
 import sqlite3
 from contextlib import contextmanager
 import os
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 app = FastAPI()
 
@@ -39,6 +42,8 @@ def init_db():
             password TEXT NOT NULL,
             friend_code TEXT UNIQUE NOT NULL,
             status TEXT DEFAULT 'offline',
+            email_verified BOOLEAN DEFAULT 0,
+            verification_token TEXT,
             created_at TEXT NOT NULL
         )
     ''')
@@ -126,6 +131,53 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
+# Email configuration
+SMTP_SERVER = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
+SMTP_PORT = int(os.environ.get('SMTP_PORT', '587'))
+SMTP_USERNAME = os.environ.get('SMTP_USERNAME', '')
+SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', '')
+FROM_EMAIL = os.environ.get('FROM_EMAIL', 'noreply@novachat.com')
+
+def send_verification_email(email: str, username: str, token: str):
+    """Send verification email to user"""
+    if not SMTP_USERNAME or not SMTP_PASSWORD:
+        print(f"Email credentials not configured. Would send verification email to {email} with token {token}")
+        return False
+    
+    try:
+        verification_url = f"{os.environ.get('APP_URL', 'http://localhost:8000')}/verify/{token}"
+        
+        msg = MIMEMultipart()
+        msg['From'] = FROM_EMAIL
+        msg['To'] = email
+        msg['Subject'] = 'Verify your NovaChat account'
+        
+        body = f"""
+        Hi {username},
+        
+        Please verify your NovaChat account by clicking the link below:
+        {verification_url}
+        
+        If you didn't create this account, you can ignore this email.
+        
+        Thanks,
+        The NovaChat Team
+        """
+        
+        msg.attach(MIMEText(body, 'plain'))
+        
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server.starttls()
+        server.login(SMTP_USERNAME, SMTP_PASSWORD)
+        server.send_message(msg)
+        server.quit()
+        
+        print(f"Verification email sent to {email}")
+        return True
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+        return False
+
 @app.get("/")
 async def root():
     return {"message": "NovaChat Server - Real-time Chat Backend"}
@@ -141,18 +193,18 @@ async def register(username: str = None, email: str = None, password: str = None
     try:
         user_id = str(uuid.uuid4())
         friend_code = manager.generate_friend_code()
+        verification_token = str(uuid.uuid4())
         
         cursor.execute(
-            "INSERT INTO users (id, username, email, password, friend_code, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (user_id, username, email, password, friend_code, 'offline', datetime.now().isoformat())
+            "INSERT INTO users (id, username, email, password, friend_code, status, email_verified, verification_token, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (user_id, username, email, password, friend_code, 'offline', 0, verification_token, datetime.now().isoformat())
         )
         conn.commit()
         
-        # In production, send verification email here
-        # For now, just log it
-        print(f"Verification email would be sent to: {email}")
+        # Send verification email
+        send_verification_email(email, username, verification_token)
         
-        return {"user_id": user_id, "friend_code": friend_code, "username": username}
+        return {"user_id": user_id, "friend_code": friend_code, "username": username, "email_verified": False}
     except sqlite3.IntegrityError:
         conn.close()
         raise HTTPException(status_code=400, detail="Username already exists")
@@ -183,6 +235,27 @@ async def login(username: str = None, password: str = None):
     
     conn.close()
     raise HTTPException(status_code=401, detail="Invalid credentials")
+
+@app.get("/verify/{token}")
+async def verify_email(token: str):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT id, username FROM users WHERE verification_token = ?", (token,))
+    user = cursor.fetchone()
+    
+    if not user:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Invalid verification token")
+    
+    try:
+        cursor.execute("UPDATE users SET email_verified = 1, verification_token = NULL WHERE id = ?", (user['id'],))
+        conn.commit()
+        conn.close()
+        return {"success": True, "message": "Email verified successfully"}
+    except Exception as e:
+        conn.close()
+        raise HTTPException(status_code=500, detail="Failed to verify email")
 
 @app.get("/friends/list/{user_id}")
 async def get_friends(user_id: str):

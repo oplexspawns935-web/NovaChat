@@ -159,7 +159,7 @@ function ChatView() {
         localStorage.setItem('friendCode', data.friend_code)
         connectWebSocket(data.user_id)
         loadFriends(data.user_id)
-        alert('Registration successful! Please check your email for verification.')
+        alert('Registration successful! A verification email has been sent to ' + inputEmail + '. Please check your inbox and click the verification link.')
       } else {
         alert(data.detail || 'Registration failed')
       }
