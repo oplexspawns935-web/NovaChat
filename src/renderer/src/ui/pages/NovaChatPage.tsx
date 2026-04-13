@@ -353,6 +353,7 @@ function FriendsView() {
   const [friends, setFriends] = React.useState<any[]>([])
   const [inputCode, setInputCode] = React.useState('')
   const [friendRequests, setFriendRequests] = React.useState<any[]>([])
+  const [loading, setLoading] = React.useState(true)
 
   React.useEffect(() => {
     const savedUserId = localStorage.getItem('userId')
@@ -362,6 +363,7 @@ function FriendsView() {
       loadFriends(savedUserId)
       loadFriendRequests(savedUserId)
     }
+    setLoading(false)
   }, [])
 
   const loadFriends = async (uid: string) => {
@@ -453,11 +455,18 @@ function FriendsView() {
         <div className="text-white font-semibold">Friends</div>
       </div>
       <div className="p-6">
-        <div className="mb-6">
-          <h2 className="text-white font-semibold mb-3">Your Friend Code</h2>
-          <div className="bg-gray-800 px-4 py-3 rounded-lg text-white font-mono text-xl">{friendCode}</div>
-          <p className="text-gray-500 text-sm mt-2">Share this code with friends to add them</p>
-        </div>
+        {!userId ? (
+          <div className="text-gray-500 text-center py-8">
+            <p className="mb-4">Please register to get your friend code</p>
+            <Link to="/chat" className="text-indigo-500 hover:text-indigo-400">Go to Chat to Register</Link>
+          </div>
+        ) : (
+          <div className="mb-6">
+            <h2 className="text-white font-semibold mb-3">Your Friend Code</h2>
+            <div className="bg-gray-800 px-4 py-3 rounded-lg text-white font-mono text-xl">{friendCode || 'Loading...'}</div>
+            <p className="text-gray-500 text-sm mt-2">Share this code with friends to add them</p>
+          </div>
+        )}
         
         {friendRequests.length > 0 && (
           <div className="mb-6">
@@ -533,13 +542,72 @@ function FriendsView() {
 }
 
 function SettingsView() {
+  const [userId, setUserId] = React.useState<string | null>(null)
+  const [username, setUsername] = React.useState('')
+  const [friendCode, setFriendCode] = React.useState('')
+
+  React.useEffect(() => {
+    const savedUserId = localStorage.getItem('userId')
+    if (savedUserId) {
+      setUserId(savedUserId)
+      setUsername(localStorage.getItem('username') || '')
+      setFriendCode(localStorage.getItem('friendCode') || '')
+    }
+  }, [])
+
+  const handleLogout = () => {
+    localStorage.removeItem('userId')
+    localStorage.removeItem('username')
+    localStorage.removeItem('friendCode')
+    window.location.reload()
+  }
+
   return (
     <div className="h-full bg-gray-900">
       <div className="h-16 border-b border-gray-700 flex items-center px-6">
         <div className="text-white font-semibold">Settings</div>
       </div>
       <div className="p-6">
-        <div className="text-gray-500 text-sm">Settings coming soon...</div>
+        {!userId ? (
+          <div className="text-gray-500 text-center py-8">
+            <p>Please register to access settings</p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="bg-gray-800 p-6 rounded-lg">
+              <h3 className="text-white font-semibold mb-4">Profile</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-gray-400 text-sm">Username</label>
+                  <div className="text-white">{username}</div>
+                </div>
+                <div>
+                  <label className="text-gray-400 text-sm">Friend Code</label>
+                  <div className="text-white font-mono">{friendCode}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gray-800 p-6 rounded-lg">
+              <h3 className="text-white font-semibold mb-4">Account</h3>
+              <button
+                onClick={handleLogout}
+                className="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg transition-colors"
+              >
+                Logout
+              </button>
+            </div>
+
+            <div className="bg-gray-800 p-6 rounded-lg">
+              <h3 className="text-white font-semibold mb-4">About</h3>
+              <div className="space-y-2 text-gray-400 text-sm">
+                <div>NovaChat v1.0</div>
+                <div>Real-time global chat application</div>
+                <div>Backend: {API_URL}</div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
