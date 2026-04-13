@@ -34,6 +34,11 @@ def init_db():
     conn = get_db_connection()
     cursor = conn.cursor()
     
+    # Enable WAL mode for better concurrency
+    cursor.execute('PRAGMA journal_mode=WAL')
+    cursor.execute('PRAGMA synchronous=NORMAL')
+    cursor.execute('PRAGMA busy_timeout=5000')
+    
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,
