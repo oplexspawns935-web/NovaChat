@@ -7,10 +7,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY server.py .
 
-ENV SMTP_SERVER=smtp.gmail.com
-ENV SMTP_PORT=587
-ENV SMTP_USERNAME=
-ENV SMTP_PASSWORD=
+ENV SENDGRID_API_KEY=
 ENV FROM_EMAIL=noreply@novachat.com
 ENV APP_URL=https://novachat-production-8aef.up.railway.app
 

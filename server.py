@@ -8,9 +8,8 @@ import asyncio
 import sqlite3
 from contextlib import contextmanager
 import os
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 
 app = FastAPI()
 
@@ -137,47 +136,36 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 # Email configuration
-SMTP_SERVER = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
-SMTP_PORT = int(os.environ.get('SMTP_PORT', '587'))
-SMTP_USERNAME = os.environ.get('SMTP_USERNAME', '')
-SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', '')
+SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY', '')
 FROM_EMAIL = os.environ.get('FROM_EMAIL', 'noreply@novachat.com')
+APP_URL = os.environ.get('APP_URL', 'http://localhost:8000')
 
 def send_verification_email(email: str, username: str, token: str):
-    """Send verification email to user"""
-    if not SMTP_USERNAME or not SMTP_PASSWORD:
-        print(f"Email credentials not configured. Would send verification email to {email} with token {token}")
+    """Send verification email to user using SendGrid"""
+    if not SENDGRID_API_KEY:
+        print(f"SendGrid API key not configured. Would send verification email to {email} with token {token}")
         return False
     
     try:
-        verification_url = f"{os.environ.get('APP_URL', 'http://localhost:8000')}/verify/{token}"
+        verification_url = f"{APP_URL}/verify/{token}"
         
-        msg = MIMEMultipart()
-        msg['From'] = FROM_EMAIL
-        msg['To'] = email
-        msg['Subject'] = 'Verify your NovaChat account'
+        message = Mail(
+            from_email=FROM_EMAIL,
+            to_emails=email,
+            subject='Verify your NovaChat account',
+            html_content=f"""
+            <p>Hi {username},</p>
+            <p>Please verify your NovaChat account by clicking the link below:</p>
+            <p><a href="{verification_url}">{verification_url}</a></p>
+            <p>If you didn't create this account, you can ignore this email.</p>
+            <p>Thanks,<br>The NovaChat Team</p>
+            """
+        )
         
-        body = f"""
-        Hi {username},
+        sg = SendGridAPIClient(SENDGRID_API_KEY)
+        response = sg.send(message)
         
-        Please verify your NovaChat account by clicking the link below:
-        {verification_url}
-        
-        If you didn't create this account, you can ignore this email.
-        
-        Thanks,
-        The NovaChat Team
-        """
-        
-        msg.attach(MIMEText(body, 'plain'))
-        
-        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
-        server.starttls()
-        server.login(SMTP_USERNAME, SMTP_PASSWORD)
-        server.send_message(msg)
-        server.quit()
-        
-        print(f"Verification email sent to {email}")
+        print(f"Verification email sent to {email}, status: {response.status_code}")
         return True
     except Exception as e:
         print(f"Failed to send email: {e}")
